@@ -1,0 +1,47 @@
+import os
+import requests
+from bs4 import BeautifulSoup
+from urllib.parse import urljoin
+
+# URL of the webpage containing the PDFs
+url = "https://www.archives.gov/research/jfk/release-2025"
+
+# Send a GET request to fetch the page content
+response = requests.get(url)
+if response.status_code != 200:
+    print(f"Failed to retrieve the page. Status code: {response.status_code}")
+    exit()
+
+# Parse the HTML content with BeautifulSoup
+soup = BeautifulSoup(response.text, 'html.parser')
+
+# Create a directory to save PDFs
+output_dir = 'jfk_pdfs'
+os.makedirs(output_dir, exist_ok=True)
+
+# Find all links (<a> tags) that have a 'href' attribute
+pdf_links = soup.find_all('a', href=True)
+
+# Iterate over the links and download PDFs
+for link in pdf_links:
+    href = link['href']
+    if href.lower().endswith('.pdf'):  # Check if the link is a PDF
+        # Create the full URL
+        pdf_url = urljoin(url, href)
+
+        # Extract the PDF file name (last part of the URL)
+        pdf_filename = os.path.join(output_dir, href.split('/')[-1])
+
+        print(f"Downloading: {pdf_url}...")
+
+        # Send a request to download the PDF
+        pdf_response = requests.get(pdf_url)
+        if pdf_response.status_code == 200:
+            # Write the content to a file
+            with open(pdf_filename, 'wb') as file:
+                file.write(pdf_response.content)
+            print(f"Downloaded: {pdf_filename}")
+        else:
+            print(f"Failed to download {pdf_url}. Status code: {pdf_response.status_code}")
+
+print("Download completed!")
